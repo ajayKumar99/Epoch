@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -331,7 +332,6 @@ class _CourseMenuScreenState extends State<CourseMenuScreen> {
         alignment: Alignment.center,
         children: <Widget>[
           GradientBackground(),
-
           Column(
             children: <Widget>[
               Padding(
@@ -365,23 +365,23 @@ class _CourseMenuScreenState extends State<CourseMenuScreen> {
                             );
                             print(_user.toJson());
                             ApiHandler _apiHandler = ApiHandler(req: _user);
-                            // String json = jsonEncode(_user.toJson());
-                            // print(json);
-                            // ApiResponse res = await _apiHandler.requestServer();
-                            Map res = await _apiHandler.requestServer();
-                            if (res == null) {
-                              CircularProgressIndicator();
-                            }
-                            widget.pref.setString('result', jsonEncode(res));
-                            print(jsonEncode(res));
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (context) {
-                                return Dashboard(
-                                  pref: widget.pref,
-                                );
-                              }),
-                              ModalRoute.withName(''),
+                            showDialog(
+                              barrierDismissible: false,
+                              context: context,
+                              builder: (context) => FutureBuilder(
+                                future: _apiHandler.requestServer(),
+                                builder: (context, response) {
+                                  if (response.hasData) {
+                                    widget.pref.setString(
+                                        'result', jsonEncode(response.data));
+                                    
+                                    return Dashboard(
+                                      pref: widget.pref,
+                                    );
+                                  }
+                                  return Center(child: CircularProgressIndicator());
+                                },
+                              ),
                             );
                           } else {
                             Scaffold.of(context).showSnackBar(_snackbar);
@@ -416,21 +416,6 @@ class _CourseMenuScreenState extends State<CourseMenuScreen> {
               ),
             ],
           ),
-          // ListView(
-          //   children: <Widget>[
-          // Padding(
-          //   padding: const EdgeInsets.all(28.0),
-          //   child: Text(
-          //     "Select your subjects",
-          //     style: TextStyle(
-          //       fontFamily: 'Amatic SC',
-          //       fontSize: 48.0,
-          //     ),
-          //   ),
-          // ),
-
-          //   ]
-          // ),
         ],
       ),
     );
@@ -495,15 +480,36 @@ class _DashboardState extends State<Dashboard> {
           IconButton(
             icon: Icon(Icons.settings_backup_restore),
             onPressed: () {
-              widget.pref.clear();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => App(
-                    pref: widget.pref,
-                  ),
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Reset the App?'),
+                  content: Text(
+                      'This will completely reset the app clearing all the timetable data and you will have to re-enter everything.'),
+                  actions: <Widget>[
+                    FlatButton(
+                      child: Text('Yes'),
+                      onPressed: () {
+                        widget.pref.clear();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => App(
+                              pref: widget.pref,
+                            ),
+                          ),
+                          ModalRoute.withName(''),
+                        );
+                      },
+                    ),
+                    FlatButton(
+                      child: Text('No'),
+                      onPressed: () => Navigator.pop(
+                        context,
+                      ),
+                    ),
+                  ],
                 ),
-                ModalRoute.withName(''),
               );
             },
           ),
